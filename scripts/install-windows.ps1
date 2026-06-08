@@ -46,7 +46,7 @@ if (-not (Test-Path $srcBin)) {
     Write-Host "Building kindle-dash.exe ..." -ForegroundColor Yellow
     Push-Location $goDir
     try {
-        & go build -o kindle-dash.exe ./cmd/kindle-dash
+        & go build -ldflags "-H windowsgui" -o kindle-dash.exe ./cmd/kindle-dash
         if ($LASTEXITCODE -ne 0) { throw "go build failed (exit $LASTEXITCODE)" }
     } finally { Pop-Location }
 }

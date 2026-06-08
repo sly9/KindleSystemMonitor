@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -17,7 +19,36 @@ import (
 	"kindle-dash/internal/transport"
 )
 
+// redirectLogsIfDaemon redirects stdout/stderr to log files when not connected
+// to a terminal. Required when launched by Task Scheduler with -H windowsgui:
+// the process has no console, so output would be silently discarded.
+func redirectLogsIfDaemon() {
+	fi, err := os.Stdout.Stat()
+	if err == nil && fi.Mode()&os.ModeCharDevice != 0 {
+		return // connected to a real terminal — no redirect needed
+	}
+	var logDir string
+	if runtime.GOOS == "windows" {
+		base := os.Getenv("LOCALAPPDATA")
+		if base == "" {
+			base = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
+		}
+		logDir = filepath.Join(base, "kindle-dash")
+	} else {
+		home, _ := os.UserHomeDir()
+		logDir = filepath.Join(home, ".cache", "kindle-dash")
+	}
+	_ = os.MkdirAll(logDir, 0o700)
+	if lf, err := os.OpenFile(filepath.Join(logDir, "run.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err == nil {
+		os.Stdout = lf
+	}
+	if ef, err := os.OpenFile(filepath.Join(logDir, "run.err"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err == nil {
+		os.Stderr = ef
+	}
+}
+
 func cmdRun(args []string) {
+	redirectLogsIfDaemon()
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	cfgPath := fs.String("config", "", "path to config.json (default: OS-conventional)")
 	interval := fs.Float64("interval", 0, "override loop interval seconds")
