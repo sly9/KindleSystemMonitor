@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"kindle-dash/internal/config"
+	"kindle-dash/internal/metrics"
 	"kindle-dash/internal/transport"
 )
 
@@ -48,6 +49,7 @@ func cmdDoctor(args []string) {
 	}
 
 	sectionConfig(cfg)
+	sectionCPUTemp()
 	sectionKeys(cfg)
 	sectionAgent()
 	sectionKnownHosts(cfg)
@@ -89,6 +91,21 @@ func sectionConfig(cfg config.Config) {
 		fmt.Printf("  identity: %q\n", cfg.Kindle.Identity)
 	}
 	fmt.Printf("  eips:     %q\n", cfg.Kindle.EIPS)
+}
+
+func sectionCPUTemp() {
+	fmt.Println("\n== CPU temp source ==")
+	ready, detail, t := metrics.DoctorPawnIO()
+	if ready {
+		if t != nil {
+			fmt.Printf("  %sPawnIO direct (no external process) — Tctl = %.1f °C\n", ok, *t)
+		} else {
+			fmt.Printf("  %sPawnIO loaded but SMN read failed\n", warn)
+		}
+		return
+	}
+	fmt.Printf("  %sPawnIO unavailable: %s\n", warn, detail)
+	fmt.Printf("        (CPU temp will fall back to LHM HTTP if temp.lhm_url is set, else N/A)\n")
 }
 
 func sectionKeys(cfg config.Config) {

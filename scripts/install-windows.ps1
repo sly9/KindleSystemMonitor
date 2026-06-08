@@ -1,11 +1,25 @@
 #Requires -Version 5.1
 # Installs kindle-dash on Windows: builds (if Go is available), copies the
-# binary into a stable location, registers HKCU\Run autostart, prints status.
-# User-level, no admin required.
+# binary into a stable location, registers Task Scheduler autostart with
+# HIGHEST privileges, prints status.
+#
+# Requires admin (UAC prompt once): the daemon talks to the PawnIO kernel
+# driver to read CPU temperature, which only accepts elevated processes.
+# `schtasks /RL HIGHEST` lets the daemon launch as admin at login without
+# further UAC prompts.
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "kindle-dash install (Windows)" -ForegroundColor Cyan
+# Self-elevate if we don't already have admin.
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Write-Host "Re-launching this script elevated (UAC prompt incoming)..." -ForegroundColor Yellow
+    $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
+    Start-Process -FilePath powershell.exe -ArgumentList $args -Verb RunAs -Wait
+    exit $LASTEXITCODE
+}
+
+Write-Host "kindle-dash install (Windows, elevated)" -ForegroundColor Cyan
 Write-Host ""
 
 # 1. Locate the go/ source tree (this script lives in <repo>/scripts/).
@@ -61,6 +75,15 @@ Write-Host ""
 Write-Host "Done." -ForegroundColor Green
 Write-Host "Config file: $env:APPDATA\kindle-dash\config.json"
 Write-Host "  (set kindle.host to your Kindle's IP if not already configured)"
+Write-Host ""
+Write-Host "PawnIO check:" -ForegroundColor Cyan
+if (Test-Path "C:\Program Files\PawnIO\PawnIO.sys") {
+    Write-Host "  [OK] PawnIO is installed - CPU temperature will work."
+} else {
+    Write-Host "  [--] PawnIO NOT installed. CPU temperature will read N/A unless you install it:"
+    Write-Host "       https://github.com/namazso/PawnIO/releases"
+    Write-Host "       (kindle-dash works fine without it; you just won't see CPU TEMP.)"
+}
 Write-Host ""
 Write-Host "Quick commands:"
 Write-Host "  $installedExe doctor       # verify SSH + Kindle reachability"

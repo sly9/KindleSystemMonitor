@@ -34,13 +34,20 @@ type gpuSample struct {
 }
 
 type defaultProvider struct {
-	lhm *lhmReader
+	pawn *pawnReader
+	lhm  *lhmReader
 }
 
-// NewDefaultProvider returns the production provider. opts.LHMUrl="" disables
-// LHM (CPU temp will be N/A).
+// NewDefaultProvider returns the production provider.
+//
+// CPU temperature resolution order:
+//  1. PawnIO via embedded AMDFamily17.bin (Windows + admin + PawnIO installed)
+//  2. LibreHardwareMonitor HTTP if opts.LHMUrl is set (fallback)
+//  3. N/A
 func NewDefaultProvider(opts Options) Provider {
-	p := &defaultProvider{}
+	p := &defaultProvider{
+		pawn: newPawnReader(),
+	}
 	if opts.LHMUrl != "" {
 		ttl := opts.LHMCacheTTL
 		if ttl <= 0 {
@@ -60,8 +67,25 @@ func (p *defaultProvider) Read() Metrics {
 	m.GPU = g.Util
 	m.VRAM = g.Mem
 	m.GPUTemp = g.Temp
-	if p.lhm != nil {
+	if p.pawn != nil {
+		m.CPUTemp = p.pawn.CPUTempC()
+	}
+	if m.CPUTemp == nil && p.lhm != nil {
 		m.CPUTemp = p.lhm.cpuTempC()
 	}
 	return m
+}
+
+// DoctorPawnIO is a one-shot status probe exposed to the `doctor` command.
+// On non-Windows platforms this always reports unsupported.
+func DoctorPawnIO() (ready bool, detail string, tempC *float64) {
+	p := newPawnReader()
+	if p == nil {
+		return false, "PawnIO is Windows-only", nil
+	}
+	ready, detail = p.Status()
+	if ready {
+		tempC = p.CPUTempC()
+	}
+	return ready, detail, tempC
 }
