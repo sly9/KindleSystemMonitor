@@ -1,5 +1,7 @@
 package metrics
 
+import "time"
+
 type Metrics struct {
 	CPU     *float64 `json:"cpu,omitempty"`
 	Mem     *float64 `json:"mem,omitempty"`
@@ -13,17 +15,43 @@ type Provider interface {
 	Read() Metrics
 }
 
+// Options configures optional data sources. Zero value works (all defaults to N/A).
+type Options struct {
+	// LHMUrl, if non-empty, is the LibreHardwareMonitor web-server endpoint
+	// (e.g. "http://localhost:8085/data.json") used to read CPU package temp.
+	// Windows has no easy native API for this, so users who want CPU temp
+	// run LHM and point us at it.
+	LHMUrl string
+
+	// LHMCacheTTL throttles LHM fetches. Zero → 5 seconds.
+	LHMCacheTTL time.Duration
+}
+
 type gpuSample struct {
 	Util *float64
 	Mem  *float64
 	Temp *float64
 }
 
-type defaultProvider struct{}
+type defaultProvider struct {
+	lhm *lhmReader
+}
 
-func NewDefaultProvider() Provider { return defaultProvider{} }
+// NewDefaultProvider returns the production provider. opts.LHMUrl="" disables
+// LHM (CPU temp will be N/A).
+func NewDefaultProvider(opts Options) Provider {
+	p := &defaultProvider{}
+	if opts.LHMUrl != "" {
+		ttl := opts.LHMCacheTTL
+		if ttl <= 0 {
+			ttl = 5 * time.Second
+		}
+		p.lhm = &lhmReader{url: opts.LHMUrl, ttl: ttl}
+	}
+	return p
+}
 
-func (defaultProvider) Read() Metrics {
+func (p *defaultProvider) Read() Metrics {
 	var m Metrics
 	cpu, mem := readCPUMem()
 	m.CPU = cpu
@@ -32,5 +60,8 @@ func (defaultProvider) Read() Metrics {
 	m.GPU = g.Util
 	m.VRAM = g.Mem
 	m.GPUTemp = g.Temp
+	if p.lhm != nil {
+		m.CPUTemp = p.lhm.cpuTempC()
+	}
 	return m
 }

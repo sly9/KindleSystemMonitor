@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"kindle-dash/internal/config"
 	"kindle-dash/internal/metrics"
 	"kindle-dash/internal/render"
 )
@@ -67,11 +69,16 @@ func usage() {
 
 func cmdOnce(args []string) {
 	fs := flag.NewFlagSet("once", flag.ExitOnError)
+	cfgPath := fs.String("config", "", "path to config.json (default: OS-conventional)")
 	asJSON := fs.Bool("json", false, "output as JSON")
 	savePath := fs.String("save", "", "also render dashboard to this PNG path")
 	_ = fs.Parse(args)
 
-	p := metrics.NewDefaultProvider()
+	cfg, _ := config.Load(*cfgPath)
+	p := metrics.NewDefaultProvider(metrics.Options{
+		LHMUrl:      cfg.Temp.LHMUrl,
+		LHMCacheTTL: time.Duration(cfg.Temp.CacheTTL * float64(time.Second)),
+	})
 	m := p.Read()
 
 	if *asJSON {

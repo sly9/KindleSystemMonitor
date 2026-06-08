@@ -33,10 +33,20 @@ type Messages struct {
 	Farewell []string `json:"farewell"`
 }
 
+type Temp struct {
+	// LHMUrl is the LibreHardwareMonitor web-server URL for CPU temp.
+	// Empty → CPU temp shows N/A (Windows has no usable native API).
+	// Typical: "http://localhost:8085/data.json"
+	LHMUrl string `json:"lhm_url"`
+	// CacheTTL throttles fetches (LHM's JSON is ~100KB). Seconds. 0 → 5s.
+	CacheTTL float64 `json:"cache_ttl"`
+}
+
 type Config struct {
 	Kindle   Kindle   `json:"kindle"`
 	Loop     Loop     `json:"loop"`
 	Messages Messages `json:"messages"`
+	Temp     Temp     `json:"temp"`
 
 	SourcePath string `json:"-"`
 }
@@ -70,6 +80,9 @@ func Defaults() Config {
 				"本日作战结束",
 				"后会有期",
 			},
+		},
+		Temp: Temp{
+			CacheTTL: 5.0,
 		},
 	}
 }

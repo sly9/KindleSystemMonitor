@@ -86,7 +86,10 @@ func cmdRun(args []string) {
 	}
 
 	dash := render.NewDashboard()
-	prov := metrics.NewDefaultProvider()
+	prov := metrics.NewDefaultProvider(metrics.Options{
+		LHMUrl:      cfg.Temp.LHMUrl,
+		LHMCacheTTL: time.Duration(cfg.Temp.CacheTTL * float64(time.Second)),
+	})
 	fmt.Printf("kindle-dash: loop (interval=%.1fs, waveform=%q, flush_every=%d)\n",
 		cfg.Loop.IntervalSec, cfg.Loop.Waveform, cfg.Loop.FlushEvery)
 
