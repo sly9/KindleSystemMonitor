@@ -71,11 +71,12 @@ python3 kindle_dash.py --message "你好 Kindle" # 推一屏文字
 
 详细参数、刷新策略、故障排查见 **[docs/使用说明.md](docs/使用说明.md)**。
 
-## Go 版（新，跨平台，去 WSL/LHM）
+## Go 版（新，跨平台，去 WSL）
 
 仓库下 `go/` 是用 Go 重写的版本，**在 Windows / macOS 原生跑**，单个二进制，
-不再需要 WSL / LibreHardwareMonitor / ControlMaster / VBS。功能完全对齐
-（采集 + 渲染 + SSH 推送 + 自启），Kindle 端协议不变。
+不再需要 WSL / ControlMaster / VBS / nvidia-smi.exe。功能完全对齐（采集 + 渲染
++ SSH 推送 + 自启），Kindle 端协议不变。LibreHardwareMonitor 由「必需」降级为
+「可选」——只为 CPU 包封温这一个指标，不填 `temp.lhm_url` → 0 外部依赖。
 
 - 一键部署：
   - Windows：双击 [`scripts\install-windows.cmd`](scripts/install-windows.cmd)

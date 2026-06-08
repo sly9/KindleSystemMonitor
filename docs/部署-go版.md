@@ -1,8 +1,14 @@
 # 部署 (Go 版)
 
 Go 重写的 `kindle-dash` 取代旧的 `kindle_dash.py` + `kindlectl` + `install.sh` +
-`config.sh` 那一套。**不依赖 WSL、LibreHardwareMonitor、ControlMaster、VBS**——
+`config.sh` 那一套。**不依赖 WSL、ControlMaster、VBS、nvidia-smi.exe**——
 一个静态二进制干掉所有附带复杂度。Kindle 端协议不变。
+
+**剩下的唯一可选依赖：LibreHardwareMonitor**——只在你想看 CPU 包封温的情况下需要。
+Windows userspace 没有读 CPU 温度的原生 API（要 kernel 驱动读 MSR），所以
+plan §6 走「opt-in 走 LHM HTTP」这条务实路线。不填 `temp.lhm_url` → CPU TEMP
+那格永远 N/A，但 GPU/CPU占用/内存全部走原生 (`nvml.dll` 直接 syscall +
+`gopsutil`)，零外部进程。
 
 本文只讲新版怎么部署 / 运行。设计思路见 [refactor.plan.md](../refactor.plan.md)。
 
@@ -213,6 +219,10 @@ kindle-dash: exited cleanly.
   "messages": {
     "welcome":  ["SYSTEM ONLINE", "", "欢迎回来", "高达驾驶员 Liuyi", "全系统已就绪"],
     "farewell": ["SYSTEM SHUTDOWN", "", "高达驾驶员 Liuyi", "本日作战结束", "后会有期"]
+  },
+  "temp": {
+    "lhm_url": "http://localhost:8085/data.json",
+    "cache_ttl": 5
   }
 }
 ```
@@ -221,6 +231,9 @@ kindle-dash: exited cleanly.
 - `loop.waveform` 常见值：`du`（快、有残影）/ `gl16`（16 灰阶慢）/ `a2`（黑白二值快）
 - `loop.flush_every = 0` 表示永不周期性 gc16 整刷（仅第 0 轮整刷一次）
 - `loop.no_farewell = true` 关闭退出告别屏
+- `temp.lhm_url` 留空（默认）→ CPU 温度永远 N/A，**完全无外部依赖**。填了就要求你装并运行
+  LibreHardwareMonitor，且在 Options 里打开 Remote Web Server (默认 8085)。`cache_ttl` 控制
+  从 LHM 拉 JSON 的 TTL 秒数（默认 5，避免每轮都拉 100KB+）
 
 ---
 
