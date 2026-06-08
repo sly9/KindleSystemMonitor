@@ -1,0 +1,7 @@
+kindle-dash: connecting to root@10.0.0.43:22...
+kindle-dash: connected.
+kindle-dash: loop (interval=3.0s, waveform="du", flush_every=10)
+round 0  cpu=37% mem=49% gpu=68% vram=43%  push=gc16 full  1.392s
+round 1  cpu=28% mem=49% gpu=57% vram=43%  push=2 cols + 2 numbers [du]  972ms
+round 2  cpu=30% mem=49% gpu=55% vram=44%  push=2 cols + 2 numbers [du]  968ms
+round 3  cpu=31% mem=49% gpu=58% vram=43%  push=2 cols + 2 numbers [du]  1.018s
