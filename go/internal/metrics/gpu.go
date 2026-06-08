@@ -8,10 +8,12 @@ import (
 
 func readGPU() gpuSample {
 	var s gpuSample
-	out, err := exec.Command("nvidia-smi",
+	cmd := exec.Command("nvidia-smi",
 		"--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu",
 		"--format=csv,noheader,nounits",
-	).Output()
+	)
+	cmd.SysProcAttr = noWindowAttr()
+	out, err := cmd.Output()
 	if err != nil {
 		return s
 	}
