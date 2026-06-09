@@ -73,6 +73,17 @@ func (p *defaultProvider) Read() Metrics {
 	if m.CPUTemp == nil && p.lhm != nil {
 		m.CPUTemp = p.lhm.cpuTempC()
 	}
+	// Native platform fallback: macOS reads CPU+GPU temps via SMC/IOKit.
+	// No-op on Windows (PawnIO/LHM already handled above) and Linux.
+	if m.CPUTemp == nil || m.GPUTemp == nil {
+		nativeCPU, nativeGPU := readNativeTemps()
+		if m.CPUTemp == nil {
+			m.CPUTemp = nativeCPU
+		}
+		if m.GPUTemp == nil {
+			m.GPUTemp = nativeGPU
+		}
+	}
 	return m
 }
 
