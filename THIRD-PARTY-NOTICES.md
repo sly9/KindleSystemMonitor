@@ -1,7 +1,7 @@
 # Third-Party Notices
 
 The `kindle-dash` binary (Go version under `go/`) bundles the following
-third-party components. The original Python implementation is unaffected.
+third-party components.
 
 ---
 
