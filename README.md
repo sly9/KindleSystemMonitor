@@ -78,12 +78,93 @@ python3 kindle_dash.py --message "你好 Kindle" # 推一屏文字
 + SSH 推送 + 自启），Kindle 端协议不变。LibreHardwareMonitor 由「必需」降级为
 「可选」——只为 CPU 包封温这一个指标，不填 `temp.lhm_url` → 0 外部依赖。
 
-- 一键部署：
-  - Windows：双击 [`scripts\install-windows.cmd`](scripts/install-windows.cmd)
-  - macOS：`./scripts/install-macos.sh`
-- 手动运行 / 调试 / 配置文件 / 子命令速查 / 自启原理 / 故障排查：
-  全在 **[docs/部署-go版.md](docs/部署-go版.md)**
-- 设计文档：[refactor.plan.md](refactor.plan.md)
+### 安装
+
+**Windows**（需要 UAC 弹窗一次，注册 Task Scheduler 高权限任务）：
+
+```
+scripts\install-windows.cmd
+```
+
+或在终端：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
+```
+
+**macOS**：
+
+```bash
+chmod +x scripts/install-macos.sh && ./scripts/install-macos.sh
+```
+
+安装脚本会自动 build 二进制（需要已装 Go）、拷到标准位置、注册登录自启。
+
+安装后务必配置 Kindle IP（首次安装必做）：
+
+```powershell
+# Windows
+notepad $env:APPDATA\kindle-dash\config.json
+```
+
+```bash
+# macOS
+nano ~/.config/kindle-dash/config.json
+```
+
+配置文件至少填：
+
+```json
+{ "kindle": { "host": "10.0.0.43" } }
+```
+
+### 启动
+
+```powershell
+# Windows（二进制装在此路径）
+& "$env:LOCALAPPDATA\Programs\kindle-dash\kindle-dash.exe" start
+
+# macOS / 已加入 PATH 后
+kindle-dash start
+```
+
+### 停止
+
+```powershell
+kindle-dash stop
+```
+
+### 重启
+
+```powershell
+kindle-dash restart
+```
+
+### 状态 / 前台调试
+
+```powershell
+# 查看安装与运行状态
+kindle-dash status
+
+# 前台运行（看实时输出，Ctrl-C 优雅退出并推告别屏）
+kindle-dash run
+
+# SSH + Kindle 可达性自检（出问题第一步）
+kindle-dash doctor
+```
+
+### 卸载
+
+```powershell
+# Windows
+scripts\uninstall-windows.cmd
+
+# macOS
+./scripts/uninstall-macos.sh
+```
+
+详细配置项、故障排查、自启原理见 **[docs/部署-go版.md](docs/部署-go版.md)**。
+设计文档：[refactor.plan.md](refactor.plan.md)
 
 ## 为什么 CPU 数据走 LibreHardwareMonitor 而不是 psutil
 
