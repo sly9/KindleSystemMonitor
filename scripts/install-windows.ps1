@@ -30,26 +30,24 @@ if (-not (Test-Path $goDir)) {
     exit 1
 }
 
-# 2. Build if the binary isn't already present.
+# 2. Always build with -H windowsgui so Task Scheduler runs silently (no console window).
 $srcBin = Join-Path $goDir "kindle-dash.exe"
-if (-not (Test-Path $srcBin)) {
-    # PATH refresh: scoop/winget put Go on the user PATH, but the current
-    # shell may have started before Go was installed.
-    $env:Path = [Environment]::GetEnvironmentVariable("Path","User") + ";" + [Environment]::GetEnvironmentVariable("Path","Machine")
-    if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
-        Write-Host "ERROR: Go toolchain not found on PATH." -ForegroundColor Red
-        Write-Host "  Install Go first:  scoop install go    (or:  winget install GoLang.Go)"
-        Write-Host "  Then re-run this script, or pre-build manually:"
-        Write-Host "      cd $goDir; go build -o kindle-dash.exe ./cmd/kindle-dash"
-        exit 1
-    }
-    Write-Host "Building kindle-dash.exe ..." -ForegroundColor Yellow
-    Push-Location $goDir
-    try {
-        & go build -ldflags "-H windowsgui" -o kindle-dash.exe ./cmd/kindle-dash
-        if ($LASTEXITCODE -ne 0) { throw "go build failed (exit $LASTEXITCODE)" }
-    } finally { Pop-Location }
+# PATH refresh: scoop/winget put Go on the user PATH, but the current
+# shell may have started before Go was installed.
+$env:Path = [Environment]::GetEnvironmentVariable("Path","User") + ";" + [Environment]::GetEnvironmentVariable("Path","Machine")
+if (-not (Get-Command go -ErrorAction SilentlyContinue)) {
+    Write-Host "ERROR: Go toolchain not found on PATH." -ForegroundColor Red
+    Write-Host "  Install Go first:  scoop install go    (or:  winget install GoLang.Go)"
+    Write-Host "  Then re-run this script, or pre-build manually:"
+    Write-Host "      cd $goDir; go build -ldflags `"-H windowsgui`" -o kindle-dash.exe ./cmd/kindle-dash"
+    exit 1
 }
+Write-Host "Building kindle-dash.exe (-H windowsgui) ..." -ForegroundColor Yellow
+Push-Location $goDir
+try {
+    & go build -ldflags "-H windowsgui" -o kindle-dash.exe ./cmd/kindle-dash
+    if ($LASTEXITCODE -ne 0) { throw "go build failed (exit $LASTEXITCODE)" }
+} finally { Pop-Location }
 
 # 3. Copy to %LOCALAPPDATA%\Programs\kindle-dash\.
 $installDir   = Join-Path $env:LOCALAPPDATA "Programs\kindle-dash"

@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
@@ -105,13 +104,10 @@ func cmdRun(args []string) {
 	fmt.Println("kindle-dash: connected.")
 
 	if cfg.Loop.WelcomeSecs > 0 && len(cfg.Messages.Welcome) > 0 {
-		png, rerr := render.RenderMessage(strings.Join(cfg.Messages.Welcome, "\n"))
+		frames, rerr := render.CockpitIntroFrames(cfg.Messages.Welcome, secs(cfg.Loop.WelcomeSecs))
 		if rerr != nil {
 			fmt.Fprintln(os.Stderr, "welcome render:", rerr)
-		} else if perr := cli.FullRefresh(png, "gc16", true); perr != nil {
-			fmt.Fprintln(os.Stderr, "welcome push:", perr)
-		}
-		if !sleepCtx(ctx, secs(cfg.Loop.WelcomeSecs)) {
+		} else if !playFrames(ctx, cli, frames) {
 			return // ctx cancelled during welcome — skip loop, go to farewell
 		}
 	}
@@ -142,11 +138,9 @@ func cmdRun(args []string) {
 	}
 
 	if !cfg.Loop.NoFarewell && len(cfg.Messages.Farewell) > 0 {
-		png, rerr := render.RenderMessage(strings.Join(cfg.Messages.Farewell, "\n"))
+		frames, rerr := render.CockpitOutroFrames(cfg.Messages.Farewell)
 		if rerr == nil {
-			if perr := cli.FullRefresh(png, "gc16", true); perr != nil {
-				fmt.Fprintln(os.Stderr, "farewell push:", perr)
-			}
+			playFrames(ctx, cli, frames)
 		}
 	}
 	fmt.Println("kindle-dash: exited cleanly.")
@@ -204,6 +198,20 @@ func pushTick(cli *transport.Client, dash *render.Dashboard, cols, nums []render
 		}
 	}
 	return fmt.Sprintf("%d cols + %d numbers [%s]", len(cols), len(nums), lp.Waveform), nil
+}
+
+// playFrames pushes each animation frame and sleeps its Hold duration.
+// Returns false if ctx is cancelled before the sequence finishes.
+func playFrames(ctx context.Context, cli *transport.Client, frames []render.Frame) bool {
+	for _, f := range frames {
+		if err := cli.FullRefresh(f.PNG, f.Waveform, f.Clear); err != nil {
+			fmt.Fprintln(os.Stderr, "animation push:", err)
+		}
+		if f.Hold > 0 && !sleepCtx(ctx, f.Hold) {
+			return false
+		}
+	}
+	return ctx.Err() == nil
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) bool {
